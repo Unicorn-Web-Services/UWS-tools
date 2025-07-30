@@ -1,0 +1,8 @@
+version: "3.8"
+
+services:
+  queue-api:
+    build: .
+    ports:
+      - "8002:8000"
+    restart: unless-stopped

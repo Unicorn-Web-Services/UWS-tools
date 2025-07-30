@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  db-api:
+    build: .
+    ports:
+      - "8004:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./db.db
+    restart: unless-stopped

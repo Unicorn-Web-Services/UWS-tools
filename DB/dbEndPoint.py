@@ -1,6 +1,7 @@
-from fastapi import APIRouter, File, UploadFile, Depends, Header, HTTPException, Form
-from fastapi.responses import JSONResponse, FileResponse
-from DB.db import SessionLocal, File as DBFile
+
+from fastapi import APIRouter, File, UploadFile, Header, HTTPException, Form
+from fastapi.responses import FileResponse
+from DB.db import insert_entity, get_entity_by_id, list_entities, delete_entity_by_id
 import os
 # Resource limiting imports
 import psutil
@@ -8,8 +9,10 @@ import shutil
 
 router = APIRouter()
 
-@router.post("/upload")
+
+@router.post("/upload/{table_name}")
 async def upload_file(
+    table_name: str,
     user_id: str = Form(...),
     bucket: str = Form(...),
     file: UploadFile = File(...),
@@ -45,62 +48,43 @@ async def upload_file(
     with open(file_location, "wb") as f:
         content = await file.read()
         f.write(content)
-    db = SessionLocal()
-    db_file = DBFile(
-        path=file_location,
-        filename=file.filename,
-        bucket=bucket,
-        user_id=user_id
-    )
-    db.add(db_file)
-    db.commit()
-    db.refresh(db_file)
-    db.close()
+    entity = {
+        "path": file_location,
+        "filename": file.filename,
+        "bucket": bucket,
+        "user_id": user_id
+    }
+    db_id = insert_entity(table_name, entity)
     return {
         "filename": file.filename,
         "user_id": user_id,
         "bucket": bucket,
         "detail": "File uploaded successfully.",
         "path": file_location,
-        "db_id": db_file.id
+        "db_id": db_id
     }
 
-@router.get("/files")
-def list_files():
-    db = SessionLocal()
-    files = db.query(DBFile).all()
-    db.close()
-    return [
-        {
-            "id": f.id,
-            "filename": f.filename,
-            "bucket": f.bucket,
-            "user_id": f.user_id,
-            "path": f.path
-        }
-        for f in files
-    ]
 
-@router.get("/download/{file_id}")
-def download_file(file_id: int):
-    db = SessionLocal()
-    db_file = db.query(DBFile).filter(DBFile.id == file_id).first()
-    db.close()
-    if not db_file or not os.path.exists(db_file.path):
+@router.get("/files/{table_name}")
+def list_files(table_name: str):
+    files = list_entities(table_name)
+    return files
+
+
+@router.get("/download/{table_name}/{entity_id}")
+def download_file(table_name: str, entity_id: int):
+    db_file = get_entity_by_id(table_name, entity_id)
+    if not db_file or not os.path.exists(db_file["path"]):
         raise HTTPException(status_code=404, detail="File not found")
-    # Pass file path directly to FileResponse for proper binary streaming
-    return FileResponse(db_file.path, filename=db_file.filename)
+    return FileResponse(db_file["path"], filename=db_file["filename"])
 
-@router.delete("/delete/{file_id}")
-def delete_file(file_id: int):
-    db = SessionLocal()
-    db_file = db.query(DBFile).filter(DBFile.id == file_id).first()
+
+@router.delete("/delete/{table_name}/{entity_id}")
+def delete_file(table_name: str, entity_id: int):
+    db_file = get_entity_by_id(table_name, entity_id)
     if not db_file:
-        db.close()
         raise HTTPException(status_code=404, detail="File not found")
-    if os.path.exists(db_file.path):
-        os.remove(db_file.path)
-    db.delete(db_file)
-    db.commit()
-    db.close()
-    return {"detail": "File deleted successfully."}
+    if os.path.exists(db_file["path"]):
+        os.remove(db_file["path"])
+    deleted_count = delete_entity_by_id(table_name, entity_id)
+    return {"detail": "File deleted successfully." if deleted_count else "File not deleted."}
