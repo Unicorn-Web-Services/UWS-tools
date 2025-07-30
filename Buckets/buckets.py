@@ -31,8 +31,10 @@ async def upload_file(
     VALID_SIGNATURE = "mysecretkey123"
     if x_signature != VALID_SIGNATURE:
         raise HTTPException(status_code=401, detail="Invalid signature key")
-    # Save file to current directory (or just read content and discard if not needed)
-    file_location = file.filename
+    # Save file to uploads directory
+    uploads_dir = "uploads"
+    os.makedirs(uploads_dir, exist_ok=True)
+    file_location = os.path.join(uploads_dir, file.filename)
     with open(file_location, "wb") as f:
         content = await file.read()
         f.write(content)

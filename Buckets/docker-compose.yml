@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  buckets-api:
+    build: .
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./buckets.db
+    restart: unless-stopped
