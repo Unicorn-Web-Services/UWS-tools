@@ -1,18 +1,24 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import os
 import base64
-from DB_NoSQL.db_noSQL import insert_entity, get_entity_by_id, list_entities, delete_entity_by_id
+from DB_NoSQL.db_noSQL import (
+    insert_entity,
+    get_entity_by_id,
+    list_entities,
+    delete_entity_by_id,
+)
 from bson import ObjectId
 
-router = APIRouter()
+app = FastAPI()
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 mongo_client = MongoClient(MONGO_URI)
 mongo_db = mongo_client["uws_nosql"]
 
-@router.post("/nosql/create_collection/{collection_name}")
+
+@app.post("/nosql/create_collection/{collection_name}")
 def create_collection(collection_name: str):
     try:
         mongo_db.create_collection(collection_name)
@@ -20,8 +26,11 @@ def create_collection(collection_name: str):
     except CollectionInvalid:
         raise HTTPException(status_code=400, detail="Collection already exists.")
 
-@router.post("/nosql/{collection_name}/save")
-async def save_entity(collection_name: str, file: UploadFile = File(None), entity: dict = None):
+
+@app.post("/nosql/{collection_name}/save")
+async def save_entity(
+    collection_name: str, file: UploadFile = File(None), entity: dict = None
+):
     if file is not None:
         file_bytes = await file.read()
         encoded_file = base64.b64encode(file_bytes).decode("utf-8")
@@ -35,7 +44,8 @@ async def save_entity(collection_name: str, file: UploadFile = File(None), entit
     inserted_id = insert_entity(collection_name, entity)
     return {"inserted_id": inserted_id}
 
-@router.put("/nosql/{collection_name}/update/{entity_id}")
+
+@app.put("/nosql/{collection_name}/update/{entity_id}")
 def update_entity(collection_name: str, entity_id: str, update: dict):
     collection = mongo_db[collection_name]
     result = collection.update_one({"_id": ObjectId(entity_id)}, {"$set": update})
@@ -43,7 +53,8 @@ def update_entity(collection_name: str, entity_id: str, update: dict):
         raise HTTPException(status_code=404, detail="Entity not found.")
     return {"updated_count": result.modified_count}
 
-@router.get("/nosql/{collection_name}/query")
+
+@app.get("/nosql/{collection_name}/query")
 def indexed_query(collection_name: str, field: str, value: str):
     collection = mongo_db[collection_name]
     result = list(collection.find({field: value}))
@@ -51,14 +62,16 @@ def indexed_query(collection_name: str, field: str, value: str):
         doc["_id"] = str(doc["_id"])
     return result
 
-@router.get("/nosql/{collection_name}/scan")
+
+@app.get("/nosql/{collection_name}/scan")
 def complete_scan(collection_name: str):
     docs = list_entities(collection_name)
     for doc in docs:
         doc["_id"] = str(doc["_id"])
     return docs
 
-@router.get("/nosql/{collection_name}/get/{entity_id}")
+
+@app.get("/nosql/{collection_name}/get/{entity_id}")
 def get_entity(collection_name: str, entity_id: str):
     doc = get_entity_by_id(collection_name, entity_id)
     if not doc:
@@ -66,7 +79,8 @@ def get_entity(collection_name: str, entity_id: str):
     doc["_id"] = str(doc["_id"])
     return doc
 
-@router.delete("/nosql/{collection_name}/delete/{entity_id}")
+
+@app.delete("/nosql/{collection_name}/delete/{entity_id}")
 def delete_entity(collection_name: str, entity_id: str):
     deleted_count = delete_entity_by_id(collection_name, entity_id)
     if deleted_count == 0:

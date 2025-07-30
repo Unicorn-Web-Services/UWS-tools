@@ -1,11 +1,17 @@
+from fastapi import FastAPI, HTTPException
+from Secrets.Secrets import (
+    store_secret,
+    get_secret,
+    update_secret,
+    delete_secret,
+    init_db,
+)
 
-from fastapi import APIRouter, HTTPException
-from Secrets.Secrets import store_secret, get_secret, update_secret, delete_secret, init_db
-
-router = APIRouter()
+app = FastAPI()
 init_db()
 
-@router.post("/secrets")
+
+@app.post("/secrets")
 def create_secret(payload: dict):
     name = payload.get("name")
     value = payload.get("value")
@@ -14,14 +20,16 @@ def create_secret(payload: dict):
     store_secret(name, value)
     return {"detail": f"Secret '{name}' stored."}
 
-@router.get("/secrets/{name}")
+
+@app.get("/secrets/{name}")
 def read_secret(name: str):
     secret = get_secret(name)
     if not secret:
         raise HTTPException(status_code=404, detail="Secret not found.")
     return {"name": secret["name"], "value": secret["value"]}
 
-@router.put("/secrets/{name}")
+
+@app.put("/secrets/{name}")
 def update_secret_endpoint(name: str, payload: dict):
     value = payload.get("value")
     if not value:
@@ -29,7 +37,8 @@ def update_secret_endpoint(name: str, payload: dict):
     update_secret(name, value)
     return {"detail": f"Secret '{name}' updated."}
 
-@router.delete("/secrets/{name}")
+
+@app.delete("/secrets/{name}")
 def delete_secret_endpoint(name: str):
     deleted = delete_secret(name)
     if not deleted:
