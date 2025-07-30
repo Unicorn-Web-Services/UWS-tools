@@ -6,7 +6,6 @@ import uvicorn
 import os
 from fastapi import Request
 # DB imports
-import dotenv
 from DB.db import SessionLocal, File as DBFile
 from fastapi import Form
 
