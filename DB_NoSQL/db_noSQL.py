@@ -44,7 +44,7 @@ except Exception as e:
 # Dynamic collection functions
 def insert_entity(collection_name, entity_data):
     """Insert a document into the specified collection."""
-    if not db:
+    if client is None or db is None:
         raise RuntimeError("MongoDB not connected")
     collection = db[collection_name]
     result = collection.insert_one(entity_data)
@@ -53,7 +53,7 @@ def insert_entity(collection_name, entity_data):
 
 def get_entity_by_id(collection_name, entity_id):
     """Get a document by its _id from the specified collection."""
-    if not db:
+    if client is None or db is None:
         raise RuntimeError("MongoDB not connected")
     collection = db[collection_name]
     return collection.find_one({"_id": ObjectId(entity_id)})
@@ -61,7 +61,7 @@ def get_entity_by_id(collection_name, entity_id):
 
 def list_entities(collection_name):
     """List all documents in the specified collection."""
-    if not db:
+    if client is None or db is None:
         raise RuntimeError("MongoDB not connected")
     collection = db[collection_name]
     return list(collection.find())
@@ -69,7 +69,7 @@ def list_entities(collection_name):
 
 def delete_entity_by_id(collection_name, entity_id):
     """Delete a document by its _id from the specified collection."""
-    if not db:
+    if client is None or db is None:
         raise RuntimeError("MongoDB not connected")
     collection = db[collection_name]
     result = collection.delete_one({"_id": ObjectId(entity_id)})

@@ -8,10 +8,11 @@ services:
       - "27017:27017"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mongo", "--quiet", "--eval", "db.adminCommand('ping')"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 30s
 
   nosql-api:
     build: .

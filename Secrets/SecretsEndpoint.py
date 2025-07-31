@@ -6,6 +6,8 @@ from Secrets import (
     update_secret,
     delete_secret,
     init_db,
+    SessionLocal,
+    Secret,
 )
 
 app = FastAPI()
@@ -45,8 +47,6 @@ def read_secret(name: str):
 def list_secrets():
     """List all secrets (names only, not values)"""
     try:
-        from Secrets.Secrets import SessionLocal, Secret
-        
         db = SessionLocal()
         secrets = db.query(Secret).all()
         db.close()
@@ -85,8 +85,6 @@ def delete_secret_endpoint(name: str):
 def health_check():
     """Health check endpoint for service monitoring"""
     try:
-        from Secrets.Secrets import SessionLocal, Secret
-        
         # Test database connection
         db = SessionLocal()
         secret_count = db.query(Secret).count()
