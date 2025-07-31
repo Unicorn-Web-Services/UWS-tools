@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
+from sqlalchemy import text
 
 # Resource limiting imports
 import psutil
@@ -260,7 +261,7 @@ def health_check():
         
         # Test database connection
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         
         # Check system resources
         cpu_percent = psutil.cpu_percent(interval=0.1)
