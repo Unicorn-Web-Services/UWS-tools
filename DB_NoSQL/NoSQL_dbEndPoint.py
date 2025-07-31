@@ -28,6 +28,18 @@ def create_collection(collection_name: str):
         raise HTTPException(status_code=400, detail="Collection already exists.")
 
 
+@app.get("/nosql/collections")
+def list_collections():
+    """List all collections in the database"""
+    try:
+        collections = mongo_db.list_collection_names()
+        return {"collections": collections}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list collections: {str(e)}"
+        )
+
+
 @app.post("/nosql/{collection_name}/save")
 async def save_entity(
     collection_name: str, file: UploadFile = File(None), entity: dict = None
@@ -42,6 +54,15 @@ async def save_entity(
         entity["file_data_base64"] = encoded_file
     elif entity is None:
         raise HTTPException(status_code=400, detail="No file or entity data provided.")
+    inserted_id = insert_entity(collection_name, entity)
+    return {"inserted_id": inserted_id}
+
+
+@app.post("/nosql/{collection_name}/save_json")
+def save_entity_json(collection_name: str, entity: dict):
+    """Save entity to collection from JSON data"""
+    if not entity:
+        raise HTTPException(status_code=400, detail="No entity data provided.")
     inserted_id = insert_entity(collection_name, entity)
     return {"inserted_id": inserted_id}
 
@@ -88,17 +109,18 @@ def delete_entity(collection_name: str, entity_id: str):
         raise HTTPException(status_code=404, detail="Entity not found.")
     return {"detail": "Entity deleted successfully."}
 
+
 @app.get("/health")
 def health_check():
     """Health check endpoint for service monitoring"""
     try:
         # Test MongoDB connection
         server_info = mongo_client.server_info()
-        
+
         # Get database stats
         stats = mongo_db.command("dbstats")
         collection_count = len(mongo_db.list_collection_names())
-        
+
         return {
             "status": "healthy",
             "service": "nosql-service",
@@ -108,8 +130,8 @@ def health_check():
                 "mongodb_version": server_info.get("version"),
                 "database_name": mongo_db.name,
                 "collection_count": collection_count,
-                "data_size_mb": stats.get("dataSize", 0) / (1024**2)
-            }
+                "data_size_mb": stats.get("dataSize", 0) / (1024**2),
+            },
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")
