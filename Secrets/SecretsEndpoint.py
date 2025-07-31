@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
-from Secrets.Secrets import (
+from Secrets import (
     store_secret,
     get_secret,
     update_secret,

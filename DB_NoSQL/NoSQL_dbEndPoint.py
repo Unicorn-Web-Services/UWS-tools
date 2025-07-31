@@ -4,7 +4,7 @@ from pymongo.errors import CollectionInvalid
 import os
 import base64
 from datetime import datetime
-from DB_NoSQL.db_noSQL import (
+from db_noSQL import (
     insert_entity,
     get_entity_by_id,
     list_entities,

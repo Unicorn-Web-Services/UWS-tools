@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Body
 from datetime import datetime
-from Queue.Queue import add_message, read_messages, delete_message_by_id
+from Queue import add_message, read_messages, delete_message_by_id
 
 app = FastAPI()
 
