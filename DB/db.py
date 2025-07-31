@@ -62,9 +62,11 @@ def execute_sql_query(query: str, params: Optional[Dict[str, Any]] = None) -> Li
             else:
                 result = conn.execute(text(query))
             
-            # For SELECT queries, fetch results
+            # For SELECT queries, fetch results and convert to plain Python types
             if query.strip().upper().startswith('SELECT') or query.strip().upper().startswith('PRAGMA'):
-                return result.fetchall()
+                rows = result.fetchall()
+                # Convert SQLAlchemy Row objects to plain tuples
+                return [tuple(row) for row in rows]
             else:
                 # For INSERT, UPDATE, DELETE queries, commit and return rowcount
                 conn.commit()
@@ -81,8 +83,10 @@ def get_database_stats() -> Dict[str, Any]:
         with engine.connect() as conn:
             # Get database file size (SQLite specific)
             try:
-                db_size = conn.execute(text("PRAGMA page_count")).fetchone()[0]
-                page_size = conn.execute(text("PRAGMA page_size")).fetchone()[0]
+                db_size_result = conn.execute(text("PRAGMA page_count")).fetchone()
+                page_size_result = conn.execute(text("PRAGMA page_size")).fetchone()
+                db_size = db_size_result[0] if db_size_result else 0
+                page_size = page_size_result[0] if page_size_result else 0
                 stats["database_size_bytes"] = db_size * page_size
                 stats["database_size_mb"] = (db_size * page_size) / (1024 * 1024)
             except:
@@ -91,22 +95,22 @@ def get_database_stats() -> Dict[str, Any]:
             
             # Get table count
             try:
-                table_count = conn.execute(text("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")).fetchone()[0]
-                stats["table_count"] = table_count
+                table_count_result = conn.execute(text("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")).fetchone()
+                stats["table_count"] = table_count_result[0] if table_count_result else 0
             except:
                 stats["table_count"] = None
             
             # Get table information
             try:
-                tables_info = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
-                stats["tables"] = [table[0] for table in tables_info]
+                tables_result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()
+                stats["tables"] = [row[0] for row in tables_result]
                 
                 # Get row counts for each table
                 table_stats = {}
                 for table_name in stats["tables"]:
                     try:
-                        row_count = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}")).fetchone()[0]
-                        table_stats[table_name] = {"row_count": row_count}
+                        count_result = conn.execute(text(f"SELECT COUNT(*) FROM {table_name}")).fetchone()
+                        table_stats[table_name] = {"row_count": count_result[0] if count_result else 0}
                     except:
                         table_stats[table_name] = {"row_count": None}
                 
