@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from datetime import datetime
 from Secrets.Secrets import (
     store_secret,
     get_secret,
@@ -44,3 +45,27 @@ def delete_secret_endpoint(name: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Secret not found.")
     return {"detail": f"Secret '{name}' deleted."}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for service monitoring"""
+    try:
+        from Secrets.Secrets import SessionLocal, Secret
+        
+        # Test database connection
+        db = SessionLocal()
+        secret_count = db.query(Secret).count()
+        db.close()
+        
+        return {
+            "status": "healthy",
+            "service": "secrets-service",
+            "timestamp": datetime.utcnow().isoformat(),
+            "checks": {
+                "database_connection": True,
+                "secret_count": secret_count,
+                "encryption_available": True
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")

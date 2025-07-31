@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from pymongo.errors import CollectionInvalid
 import os
 import base64
+from datetime import datetime
 from DB_NoSQL.db_noSQL import (
     insert_entity,
     get_entity_by_id,
@@ -86,3 +87,29 @@ def delete_entity(collection_name: str, entity_id: str):
     if deleted_count == 0:
         raise HTTPException(status_code=404, detail="Entity not found.")
     return {"detail": "Entity deleted successfully."}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for service monitoring"""
+    try:
+        # Test MongoDB connection
+        server_info = mongo_client.server_info()
+        
+        # Get database stats
+        stats = mongo_db.command("dbstats")
+        collection_count = len(mongo_db.list_collection_names())
+        
+        return {
+            "status": "healthy",
+            "service": "nosql-service",
+            "timestamp": datetime.utcnow().isoformat(),
+            "checks": {
+                "mongodb_connection": True,
+                "mongodb_version": server_info.get("version"),
+                "database_name": mongo_db.name,
+                "collection_count": collection_count,
+                "data_size_mb": stats.get("dataSize", 0) / (1024**2)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")

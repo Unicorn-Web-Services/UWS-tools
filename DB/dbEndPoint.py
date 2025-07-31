@@ -1,7 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, Header, HTTPException, Form
 from fastapi.responses import FileResponse
-from DB.db import insert_entity, get_entity_by_id, list_entities, delete_entity_by_id
+from db import insert_entity, get_entity_by_id, list_entities, delete_entity_by_id
 import os
+from datetime import datetime
 
 # Resource limiting imports
 import psutil
@@ -99,3 +100,32 @@ def delete_file(table_name: str, entity_id: int):
     return {
         "detail": "File deleted successfully." if deleted_count else "File not deleted."
     }
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for service monitoring"""
+    try:
+        from DB.db import engine
+        
+        # Test database connection
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+        
+        # Check system resources
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        memory_info = psutil.virtual_memory()
+        disk_usage = shutil.disk_usage(os.getcwd())
+        
+        return {
+            "status": "healthy",
+            "service": "database-service",
+            "timestamp": datetime.utcnow().isoformat(),
+            "checks": {
+                "database_connection": True,
+                "cpu_usage_percent": cpu_percent,
+                "memory_usage_percent": memory_info.percent,
+                "disk_free_gb": disk_usage.free / (1024**3)
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Service unhealthy: {str(e)}")
