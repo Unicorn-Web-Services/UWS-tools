@@ -6,19 +6,30 @@ app = FastAPI()
 
 
 # Add message to queue
-@app.post("/queue")
+@app.post("/queue/add")
 def queue_add(message: dict = Body(...)):
     if "message" not in message:
         raise HTTPException(status_code=400, detail="Missing 'message' field.")
     msg = add_message(message["message"])
-    return msg
+    return {
+        "id": msg["id"],
+        "message": msg["message"],
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 
 # Read messages from queue
-@app.get("/queue")
+@app.get("/queue/read")
 def queue_read(limit: int = 10):
     msgs = read_messages(limit)
-    return msgs
+    return [
+        {
+            "id": msg["id"],
+            "message": msg["message"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        for msg in msgs
+    ]
 
 
 # Delete message by ID
@@ -27,7 +38,7 @@ def queue_delete(message_id: str):
     deleted = delete_message_by_id(message_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Message not found.")
-    return {"detail": "Message deleted."}
+    return {"deleted": True, "message_id": message_id}
 
 @app.get("/health")
 def health_check():

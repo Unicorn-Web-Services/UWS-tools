@@ -22,12 +22,47 @@ def create_secret(payload: dict):
     return {"detail": f"Secret '{name}' stored."}
 
 
+@app.post("/secrets/store")
+def store_secret_endpoint(payload: dict):
+    """Alias for create_secret to match expected API"""
+    return create_secret(payload)
+
+
 @app.get("/secrets/{name}")
 def read_secret(name: str):
     secret = get_secret(name)
     if not secret:
         raise HTTPException(status_code=404, detail="Secret not found.")
-    return {"name": secret["name"], "value": secret["value"]}
+    return {
+        "name": secret["name"], 
+        "value": secret["value"],
+        "created_at": secret["created_at"].isoformat(),
+        "updated_at": secret["updated_at"].isoformat()
+    }
+
+
+@app.get("/secrets")
+def list_secrets():
+    """List all secrets (names only, not values)"""
+    try:
+        from Secrets.Secrets import SessionLocal, Secret
+        
+        db = SessionLocal()
+        secrets = db.query(Secret).all()
+        db.close()
+        
+        return {
+            "secrets": [
+                {
+                    "name": secret.name,
+                    "created_at": secret.created_at.isoformat(),
+                    "updated_at": secret.updated_at.isoformat()
+                }
+                for secret in secrets
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list secrets: {str(e)}")
 
 
 @app.put("/secrets/{name}")
